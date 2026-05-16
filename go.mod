@@ -1,4 +1,4 @@
-module udp
+module vot
 
 go 1.25.8
 
