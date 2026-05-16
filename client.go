@@ -10,13 +10,22 @@ import (
 	"github.com/gordonklaus/portaudio"
 )
 
+func select_device(devices []*portaudio.DeviceInfo) *portaudio.DeviceInfo {
+	for i, d := range devices {
+		fmt.Printf("%d: %s\n", i, d.Name)
+	}
+	var choice int
+	fmt.Scan(&choice)
+	return devices[choice]
+}
+
 func main() {
 	// Setup SIGINT and SIGTERM signal channel for graceful exit
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 
 	// Connect to UDP server
-	addr, err := net.ResolveUDPAddr("udp", "192.168.1.122:9000")
+	addr, err := net.ResolveUDPAddr("udp", "100.113.183.17:9000")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Error resolving UDP address: ", err)
 		return
@@ -42,8 +51,39 @@ func main() {
 	}
 	defer portaudio.Terminate()
 
+
+	// Setup audio devices
+	devices, _ := portaudio.Devices()
+	fmt.Print("\033[H\033[2J")
+	fmt.Println("=== Select Input Device ===")
+	idevice := select_device(devices)
+
+	fmt.Print("\033[H\033[2J")
+	fmt.Println("=== Select Output Device ===")
+	odevice := select_device(devices)
+
+	// Setup stream parameters
+	iparams := portaudio.StreamParameters{
+		Input: portaudio.StreamDeviceParameters{
+			Device:   idevice,
+			Channels: 1,
+			Latency:  idevice.DefaultLowInputLatency,
+		},
+		SampleRate:      48000,
+		FramesPerBuffer: 1024,
+	}
+	oparams := portaudio.StreamParameters{
+		Output: portaudio.StreamDeviceParameters{
+			Device:   odevice,
+			Channels: 1,
+			Latency:  odevice.DefaultLowOutputLatency,
+		},
+		SampleRate:      48000,
+		FramesPerBuffer: 1024,
+	}
+
 	// Create input stream with capture callback closure
-	istream, err := portaudio.OpenDefaultStream(1, 0, 48000, 1024,
+	istream, err := portaudio.OpenStream(iparams,
 		// Arrange samples into little endian byte array and send to server
 		func(in []int32) {
 			bytes := make([]byte, len(in)*4)
@@ -66,7 +106,7 @@ func main() {
 	output_channel := make(chan []int32, 10)
 
 	// Create output stream with playback callback closure
-	ostream, err := portaudio.OpenDefaultStream(0, 1, 48000, 1024,
+	ostream, err := portaudio.OpenStream(oparams,
 		// Fills output buffer with data from output_channel
 		func(out []int32) {
 			select {
@@ -105,6 +145,9 @@ func main() {
 			output_channel <- samples
 		}
 	}()
+
+	fmt.Print("\033[H\033[2J")
+	fmt.Println("*** Have Fun and Be Nice! ***")
 
 	// Catch SIGINT and SIGTERM to run defer statements and exit cleanly
 	<-sig
