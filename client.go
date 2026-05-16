@@ -16,7 +16,6 @@ func main() {
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 
 	// Connect to UDP server
-	//addr, err := net.ResolveUDPAddr("udp", "75.188.38.21:9000")
 	addr, err := net.ResolveUDPAddr("udp", "192.168.1.122:9000")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Error resolving UDP address: ", err)
