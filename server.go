@@ -12,7 +12,7 @@ type client struct {
 }
 
 func main() {
-	addr, err := net.ResolveUDPAddr("udp", ":9000")
+	addr, err := net.ResolveUDPAddr("udp", "0.0.0.0:9000")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Error resolving UDP address: ", err)
 		os.Exit(1)
@@ -27,7 +27,7 @@ func main() {
 	fmt.Println("Listening on port 9000...")
 
 	clients := map[string]client{}
-	buf := make([]byte, 1024)
+	buf := make([]byte, 1024*4)
 	for {
 		// Recieve message from client
 		cnt, sender, err := conn.ReadFromUDP(buf)
